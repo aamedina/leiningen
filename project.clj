@@ -5,10 +5,5 @@
 (defproject leiningen "0.5.0"
   :description "A build tool designed not to set your hair on fire."
   :main leiningen.core
-  :dependencies [[org.clojure/clojure "1.1.0-alpha-SNAPSHOT"]
-                 [org.clojure/clojure-contrib "1.0-SNAPSHOT"]
-                 [ant/ant-launcher "1.6.2"]
-                 [org.apache.maven/maven-ant-tasks "2.0.10"]]
-  ;; Wait till this makes it to a public repo.
-  ;; :dev-dependencies [[org.clojure/swank-clojure "1.0"]]
-  )
+  :dependencies [[Clojure "1.6.0.1"]
+                 [Nuget.Core "2.8.3"]])
