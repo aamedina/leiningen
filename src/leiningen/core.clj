@@ -1,6 +1,6 @@
 (ns leiningen.core
-  (:use [clojure.contrib.with-ns])
-  (:gen-class))
+  (:gen-class)
+  (:require [clojure.clr.io :as io]))
 
 (def project nil)
 
@@ -14,16 +14,17 @@
                                   :group ~(or (namespace project-name)
                                               (name project-name))
                                   :version ~version
-                                  :root ~(.getParent (java.io.File. *file*)))))
+                                  :root ~(.Directory (io/as-file *file*)))))
        (def ~(symbol (name project-name)) project)))
 
-;; So it doesn't need to be fully-qualified in project.clj
-(with-ns 'clojure.core (use ['leiningen.core :only ['defproject]]))
+(binding [*ns* (find-ns 'clojure.core)]
+  (use '[leiningen.core :only [defproject]]))
 
 (defn read-project
-  ([file] (load-file file)
-     project)
-  ([] (read-project "project.clj")))
+  ([] (read-project "project.clj"))
+  ([file]
+   (load-file file)
+   project))
 
 (def aliases {"--help" "help" "-h" "help" "-?" "help"})
 
@@ -36,5 +37,4 @@
     (binding [*compile-path* (or (:compile-path project)
                                  (str (:root project) "/classes/"))]
       (apply action project args)
-      ;; In case tests or some other task started any:
       (shutdown-agents))))
