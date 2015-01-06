@@ -1,6 +1,7 @@
 (ns leiningen.core
   (:gen-class)
-  (:require [clojure.clr.io :as io]))
+  (:require [clojure.clr.io :as io]
+            [clojure.clr.shell :as shell]))
 
 (def project nil)
 
@@ -20,6 +21,11 @@
 
 (binding [*ns* (find-ns 'clojure.core)]
   (use '[leiningen.core :only [defproject]]))
+
+(if (.Exists (System.IO.DirectoryInfo. "Nuget.Core.2.8.3"))
+  (assembly-load-file "Nuget.Core.2.8.3/lib/net40-Client/NuGet.Core.dll")
+  (when (zero? (:exit (shell/sh "nuget" "install" "Nuget.Core")))
+    (assembly-load-file "Nuget.Core.2.8.3/lib/net40-Client/NuGet.Core.dll")))
 
 (defn read-project
   ([] (read-project "project.clj"))

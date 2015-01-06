@@ -8,7 +8,7 @@
 unless a list of :namespaces is provided in project.clj."
   [project]
   (doseq [n (or (if (identical? (:aot project) :all)
-                  (util/find-namespaces-in-dir (:source-paths project))
+                  (mapcat util/find-namespaces-in-dir (:source-paths project))
                   (:aot project)))]
     (println "Compiling" n)
     (clojure.core/compile n)))
