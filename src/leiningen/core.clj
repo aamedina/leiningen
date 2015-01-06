@@ -9,12 +9,13 @@
   ;; any namespace due to load-file; we can't just create a var with
   ;; def or we would not have access to it once load-file returned.
   `(do (alter-var-root #'project
-                       (fn [_#] (assoc (apply hash-map (quote ~args))
-                                  :name ~(name project-name)
-                                  :group ~(or (namespace project-name)
-                                              (name project-name))
-                                  :version ~version
-                                  :root ~(.Directory (io/as-file *file*)))))
+                       (fn [_]
+                         (assoc (apply hash-map (quote ~args))
+                           :name ~(name project-name)
+                           :group ~(or (namespace project-name)
+                                       (name project-name))
+                           :version ~version
+                           :root ~(str (.Directory (io/as-file *file*))))))
        (def ~(symbol (name project-name)) project)))
 
 (binding [*ns* (find-ns 'clojure.core)]
@@ -35,6 +36,6 @@
         action (ns-resolve action-ns (symbol command))
         project (read-project)]
     (binding [*compile-path* (or (:compile-path project)
-                                 (str (:root project) "/classes/"))]
+                                 (str (:root project) "."))]
       (apply action project args)
       (shutdown-agents))))

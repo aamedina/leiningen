@@ -1,10 +1,9 @@
 (ns leiningen.clean
   "Remove compiled files and dependencies from project."
-  (:use [clojure.contrib.java-utils :only [file delete-file
-                                           delete-file-recursively]]))
+  (:require [clojure.clr.io :as io])
+  (:import [System.IO DirectoryInfo]))
 
-(defn clean [project & args]
-  (delete-file (str (:root project) "/" (:name project) ".jar") true)
-  (doseq [d ["classes" "lib"]]
-    (println "Cleaning " d)
-    (delete-file-recursively (file (:root project) d) true)))
+(defn clean [project]
+  (let [dir (DirectoryInfo. (:target-path project))]
+    (when (.Exists dir)
+      (.Delete dir))))
