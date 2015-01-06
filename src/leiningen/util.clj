@@ -54,4 +54,3 @@
 (defn find-namespaces-on-compile-path
   []
   (find-namespaces-in-dir *compile-path*))
-

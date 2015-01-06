@@ -107,7 +107,7 @@ if $cygwin; then
   export NULEIN_HOME=`cygpath -w "$NULEIN_HOME"`
 fi
 
-NULEIN_ASM="$NULEIN_HOME/self-installs/leiningen-$NULEIN_VERSION"
+export NULEIN_ASM="$NULEIN_HOME/self-installs/leiningen-$NULEIN_VERSION"
 
 # normalize $0 on certain BSDs
 if [ "$(dirname "$0")" = "." ]; then

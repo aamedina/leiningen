@@ -3,7 +3,7 @@
   (:require [leiningen.util :as util]))
 
 (def tasks (filter #(re-find #"^leiningen\.(?!core)" (name %))
-                   (util/find-namespaces-on-compile-path)))
+                   (util/find-namespaces-in-dir "src")))
 
 (defn help-for [task]
   (let [task-ns (symbol (str "leiningen." task))
