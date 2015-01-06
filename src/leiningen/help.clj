@@ -1,9 +1,9 @@
 (ns leiningen.help
   "Display a list of tasks or help for a given task."
-  (:use [clojure.contrib.find-namespaces :only [find-namespaces-on-classpath]]))
+  (:require [leiningen.util :as util]))
 
 (def tasks (filter #(re-find #"^leiningen\.(?!core)" (name %))
-                      (find-namespaces-on-classpath)))
+                   (util/find-namespaces-on-compile-path)))
 
 (defn help-for [task]
   (let [task-ns (symbol (str "leiningen." task))

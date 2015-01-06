@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+
+# Ensure this file is executable via `chmod a+x lein`, then place it
+# somewhere on your $PATH, like ~/bin. The rest of Leiningen will be
+# installed upon first run into the ~/.lein/self-installs directory.
+
+export NULEIN_VERSION="0.5.0"
+export CLOJURE_LOAD_PATH=$CLOJURE_LOAD_PATH
+export CLOJURE_COMPILE_PATH=$CLOJURE_COMPILE_PATH
+
+case $NULEIN_VERSION in
+    *SNAPSHOT) SNAPSHOT="YES" ;;
+    *) SNAPSHOT="NO" ;;
+esac
+
+if [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "msys" ]]; then
+  delimiter=";"
+else
+    delimiter=":"
+fi
+
+if [[ "$OSTYPE" == "cygwin" ]]; then
+  cygwin=true
+else
+    cygwin=false
+fi
+
+function make_native_path {
+    if $cygwin && [[ "$1"  == /* ]]; then
+      echo -n "$(cygpath -wp "$1")"
+    elif [[ "$OSTYPE" == "msys" && "$1"  == /?/* ]]; then
+      echo -n "$(sh -c "(cd $1 2</dev/null && pwd -W) || echo $1 | sed 's/^\\/\([a-z]\)/\\1:/g'")"
+    else
+        echo -n "$1"
+    fi
+}
+
+#  usage : add_path PATH_VAR [PATH]...
+function add_path {
+    local path_var="$1"
+    shift
+    while [ -n "$1" ];do
+        if [[ -z ${!path_var} ]]; then
+          export ${path_var}="$(make_native_path "$1")"
+        else
+            export ${path_var}="${!path_var}${delimiter}$(make_native_path "$1")"
+        fi
+        shift
+    done
+}
+
+function download_failed_message {
+    echo "Failed to download $1 (exit code $2)"
+    echo "It's possible your HTTP client's certificate store does not have the"
+    echo "correct certificate authority needed. This is often caused by an"
+    echo "out-of-date version of libssl. It's also possible that you're behind a"
+    echo "firewall and haven't set HTTP_PROXY and HTTPS_PROXY."
+}
+
+function self_install {
+    if [ -r "$NULEIN_ASM" ]; then
+      echo "The self-install directory already exists at $NULEIN_ASM."
+      echo "If you wish to re-download, delete it and rerun \"$0 self-install\"."
+      exit 1
+    fi
+    echo "Downloading Leiningen to $NULEIN_ASM now..."
+    mkdir -p "$(dirname "$NULEIN_ASM")"
+    NULEIN_URL="http://downloads.sourceforge.net/project/clojureclr/clojure-clr-1.6.0-Debug-4.0.zip?r=&ts=1420579357&use_mirror=iweb"
+    $HTTP_CLIENT "$NULEIN_ASM.pending" "$NULEIN_URL"
+    local exit_code=$?
+    if [ $exit_code == 0 ]; then
+      unzip "$NULEIN_ASM.pending" -d "$NULEIN_ASM"
+    else
+        rm "$NULEIN_ASM.pending" 2> /dev/null
+        download_failed_message "$NULEIN_URL" "$exit_code"
+        exit 1
+    fi
+}
+
+if [ `id -u` -eq 0 ] && [ "$NULEIN_ROOT" = "" ]; then
+  echo "WARNING: You're currently running as root; probably by accident."
+  echo "Press control-C to abort or Enter to continue as root."
+  echo "Set NULEIN_ROOT to disable this warning."
+  read _
+fi
+
+NOT_FOUND=1
+ORIGINAL_PWD="$PWD"
+while [ ! -r "$PWD/project.clj" ] && [ "$PWD" != "/" ] && [ $NOT_FOUND -ne 0 ]
+do
+    cd ..
+    if [ "$(dirname "$PWD")" = "/" ]; then
+      NOT_FOUND=0
+      cd "$ORIGINAL_PWD"
+    fi
+done
+
+export NULEIN_HOME="${LEIN_HOME:-"$HOME/.nulein"}"
+
+for f in "$NULEIN_HOME/leinrc" ".leinrc"; do
+    if [ -e "$f" ]; then
+      source "$f"
+    fi
+done
+
+if $cygwin; then
+  export NULEIN_HOME=`cygpath -w "$NULEIN_HOME"`
+fi
+
+NULEIN_ASM="$NULEIN_HOME/self-installs/leiningen-$NULEIN_VERSION"
+
+# normalize $0 on certain BSDs
+if [ "$(dirname "$0")" = "." ]; then
+  SCRIPT="$(which $(basename "$0"))"
+  if [ -z "$SCRIPT" ]; then
+    SCRIPT="$0"
+  fi
+else
+    SCRIPT="$0"
+fi
+
+# resolve symlinks to the script itself portably
+while [ -h "$SCRIPT" ] ; do
+    ls=`ls -ld "$SCRIPT"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+      SCRIPT="$link"
+    else
+        SCRIPT="$(dirname "$SCRIPT"$)/$link"
+    fi
+done
+
+BIN_DIR="$(dirname "$SCRIPT")"
+
+export NULEIN_CLR_OPTS="${LEIN_CLR_OPTS-"-XX:+TieredCompilation -XX:TieredStopAtLevel=1"}"
+
+# This needs to be defined before we call HTTP_CLIENT below
+if [ "$HTTP_CLIENT" = "" ]; then
+  if type -p curl >/dev/null 2>&1; then
+    if [ "$https_proxy" != "" ]; then
+      CURL_PROXY="-x $https_proxy"
+    fi
+    HTTP_CLIENT="curl $CURL_PROXY -f -L -o"
+  else
+      HTTP_CLIENT="wget -O"
+  fi
+fi
+
+add_path CLOJURE_COMPILE_PATH "$NULEIN_ASM"
+add_path CLOJURE_LOAD_PATH "$NULEIN_ASM"
+
+if [ ! -r "$NULEIN_ASM" -a "$1" != "self-install" ]; then
+  self_install
+fi
+
+export MONO_CMD="${MONO_CMD:-"mono"}"
+export NULEIN_MONO_CMD="${NULEIN_MONO_CMD:-$MONO_CMD}"
+
+cygterm=false
+if $cygwin; then
+  case "$TERM" in
+      rxvt* | xterm* | vt*) cygterm=true ;;
+  esac
+fi
+
+if $cygterm; then
+  stty -icanon min 1 -echo > /dev/null 2>&1
+fi
+
+if [ "$1" = "self-install" ]; then
+  echo "Manual self-install is deprecated; it will run automatically when necessary."
+  self_install
+else
+    if $cygwin; then
+      ORIGINAL_PWD=`cygpath -w "$ORIGINAL_PWD"`
+    fi
+    if [ -f .nulein-compile-path ]; then
+      add_path CLOJURE_COMPILE_PATH "$(cat .nulein-compile-path)"
+    fi
+
+    if [ $DEBUG ]; then
+      echo "Leiningen's classpath: $CLOJURE_COMPILE_PATH"
+    fi
+fi
+
+if [ "$1" = "repl" ]; then
+  "$MONO_CMD" "$NULEIN_ASM/Debug 4.0/Clojure.Main.exe"
+else
+    if [ -z "$1" ]; then
+      echo "$0 missing task"
+      echo "Usage: $0 taskname"
+    else
+      exec "$MONO_CMD" "$NULEIN_ASM/Debug 4.0/Clojure.Main.exe" -m leiningen.core $@
+    fi
+fi

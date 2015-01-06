@@ -1,9 +1,9 @@
 (ns leiningen.test
   "Run the project's tests."
   (:refer-clojure :exclude [test])
-  (:use [clojure.test]
-        [clojure.contrib.java-utils :only [file]]
-        [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]]))
+  (:use [clojure.test])
+  (:require [clojure.clr.io :as io]
+            [leiningen.util :as util]))
 
 (defonce old-test-var test-var)
 
@@ -16,8 +16,7 @@
 
 (defn run-matching [project preds]
   (binding [test-var (partial test-var-matching (merge-predicates preds))]
-    (doseq [n (find-namespaces-in-dir
-               (file (:root project) "test"))]
+    (doseq [n (util/find-namespaces-in-dir (str "test/" (:root project)))]
       (require n)
       (run-tests n))))
 
@@ -28,5 +27,4 @@ var's metadata. Does not support anonymous fns; works best with keywords."
   (let [preds (if (empty? args)
                 [identity]
                 (map (comp eval read-string) args))]
-    ;; TODO: System/exit appropriately (depends on Clojure ticket #193)
     (run-matching project preds)))

@@ -37,6 +37,8 @@
           (.InstallPackage manager id semver))))))
 
 (def sample-deps
-  '{:dependencies [[Clojure "1.6.0.1"] [Nuget.Core "2.8.3"]]
+  '{:dependencies [[Clojure "1.6.0"]
+                   [clojure.tools.namespace "0.2.7.0"]
+                   [Nuget.Core "2.8.3"]]
     :repositories {"nuget-api-v2" "https://packages.nuget.org/api/v2"}
     :target-path "/Users/adrian/workspace/clr/leiningen/target"})
